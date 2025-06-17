@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum userRole {
+  member
+  admin
+}
+
+enum taskStatus {
+  pending
+  in_progress
+  completed
+}
+
+enum taskPriority {
+  high
+  medium
+  low
+}
+
+model User {
+  id String @id @default(uuid())
+  name String
+  email String
+  password String
+
+  role userRole @default(member)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updateAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+
+  TeamMember TeamMember[]
+  task Task[]
+  TaskHistory TaskHistory[]
+}
+
+model Team {
+  id String @id @default(uuid())
+  name String
+  description String
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  TeamMember TeamMember[]
+
+  task Task[]
+}
+
+model TeamMember {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+
+  user User @relation(fields: [userId], references: [id])
+
+  teamId String @map("team_id")
+
+  team Team @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("team_members")
+}
+
+model Task {
+  id String @id @default(uuid())
+  title String
+  description String
+  status taskStatus @default(pending)
+  priority taskPriority @default(low)
+  
+  assignedTo String @map("assigned_to")
+
+  user User @relation(fields: [assignedTo], references: [id])
+  
+  teamId String @map("team_id")
+
+  team Team @relation(fields: [teamId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+
+  @@map("tasks")
+  TaskHistory TaskHistory[]
+}
+
+model TaskHistory {
+  id String @id @default(uuid())
+  taskId String @map("task_id")
+
+  task Task @relation(fields: [taskId], references: [id])
+
+  changedBy String @map("changed_by")
+
+  user User @relation(fields: [changedBy], references: [id])
+
+  oldStatus taskStatus @map("old_status")
+  newStatus taskStatus @map("new_status")
+
+  changedAt DateTime @default(now()) @map("changed_at")
+
+}

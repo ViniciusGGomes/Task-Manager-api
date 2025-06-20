@@ -48,24 +48,14 @@ class TeamsController {
 
   async show(request: Request, response: Response) {
     const paramsSchema = z.object({
-      id: z.string().uuid(),
+      team_id: z.string().uuid(),
     });
 
-    const { id } = paramsSchema.parse(request.params);
+    const { team_id } = paramsSchema.parse(request.params);
 
-    const teamId = await prisma.team.findFirst({
+    const team = await prisma.team.findFirst({
       where: {
-        id,
-      },
-    });
-
-    if (!teamId) {
-      throw new AppError("Team not found");
-    }
-
-    const teamDetails = await prisma.team.findUnique({
-      where: {
-        id,
+        id: team_id,
       },
       select: {
         id: true,
@@ -78,6 +68,17 @@ class TeamsController {
                 id: true,
                 name: true,
                 email: true,
+                task: {
+                  select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    status: true,
+                    priority: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                },
               },
             },
           },
@@ -85,7 +86,11 @@ class TeamsController {
       },
     });
 
-    return response.json({ teamDetails });
+    if (!team) {
+      throw new AppError("Team not found");
+    }
+
+    return response.json({ team });
   }
 
   async update(request: Request, response: Response) {
@@ -107,6 +112,10 @@ class TeamsController {
 
     if (teamWithSameName && teamWithSameName.id !== team.id) {
       throw new AppError("This Team name is already in use");
+    }
+
+    if (team.name === name && team.description === description) {
+      throw new AppError("No changes detected to update the team");
     }
 
     await prisma.team.update({
